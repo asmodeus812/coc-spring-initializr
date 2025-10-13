@@ -1,0 +1,148 @@
+{
+    "name": "coc-spring-initializr",
+    "version": "0.0.1",
+    "description": "Coc extension for creating spring & other projects",
+    "author": "asmodeus812",
+    "license": "MIT",
+    "main": "lib/index.js",
+    "keywords": [
+        "coc.nvim"
+    ],
+    "repository": {
+        "type": "git",
+        "url": "https://github.com/asmodeus812/coc-spring-initializr"
+    },
+    "engines": {
+        "coc": "^0.0.82"
+    },
+    "scripts": {
+        "watch": "node esbuild.mjs --watch",
+        "build": "node esbuild.mjs",
+        "prepare": "node esbuild.mjs"
+    },
+    "devDependencies": {
+        "coc.nvim": "^0.0.83-next.18",
+        "copy-webpack-plugin": "^11.0.0",
+        "domhandler": "^5.0.3",
+        "esbuild": "^0.15.13",
+        "extract-zip": "^2.0.1",
+        "glob": "^7.2.3",
+        "htmlparser2": "^10.0.0",
+        "md5": "^2.3.0",
+        "mocha": "^9.2.2",
+        "ts-loader": "^9.4.2",
+        "tslint": "^6.1.3",
+        "typescript": "^5.3.3",
+        "vscode-languageserver-protocol": "^3.17.2",
+        "webpack": "^5.76.0",
+        "webpack-cli": "^4.10.0",
+        "xml2js": "^0.6.2"
+    },
+    "dependencies": {
+        "development": "^0.0.6",
+        "fs-extra": "^10.1.0",
+        "lodash": "^4.17.21",
+        "minimatch": "^5.1.6"
+    },
+    "activationEvents": [
+        "*",
+        "workspaceContains:.vim/NEWLY_CREATED_BY_SPRING_INITIALIZR"
+    ],
+    "contributes": {
+        "configuration": {
+            "title": "Spring Initializr",
+            "properties": {
+                "spring.initializr.serviceUrl": {
+                    "default": [
+                        "https://start.spring.io"
+                    ],
+                    "type": [
+                        "string",
+                        "array"
+                    ],
+                    "pattern": "https?://.+",
+                    "scope": "window",
+                    "description": "Spring Initializr Service URL(s). If more than one url is specified, it requires you to select one every time you create a project."
+                },
+                "spring.initializr.defaultLanguage": {
+                    "default": "",
+                    "type": "string",
+                    "enum": [
+                        "",
+                        "Java",
+                        "Kotlin",
+                        "Groovy"
+                    ],
+                    "scope": "window",
+                    "description": "Default language."
+                },
+                "spring.initializr.defaultJavaVersion": {
+                    "default": "",
+                    "type": "string",
+                    "enum": [
+                        "",
+                        "11",
+                        "15",
+                        "8"
+                    ],
+                    "scope": "window",
+                    "description": "Default Java version."
+                },
+                "spring.initializr.defaultGroupId": {
+                    "default": "com.example",
+                    "type": "string",
+                    "scope": "window",
+                    "description": "Default value for Group Id."
+                },
+                "spring.initializr.defaultArtifactId": {
+                    "default": "demo",
+                    "type": "string",
+                    "scope": "window",
+                    "description": "Default value for Artifact Id."
+                },
+                "spring.initializr.defaultPackaging": {
+                    "default": "",
+                    "type": "string",
+                    "enum": [
+                        "",
+                        "JAR",
+                        "WAR"
+                    ],
+                    "scope": "window",
+                    "description": "Default packaging."
+                },
+                "spring.initializr.defaultOpenProjectMethod": {
+                    "default": "",
+                    "type": "string",
+                    "scope": "window",
+                    "description": "Default action for newly generated projects",
+                    "enum": [
+                        "",
+                        "Open",
+                        "Cancel"
+                    ]
+                },
+                "spring.initializr.parentFolder": {
+                    "default": "artifactId",
+                    "type": "string",
+                    "enum": [
+                        "artifactId",
+                        "none"
+                    ],
+                    "enumDescriptions": [
+                        "Place project in a folder named after Artifact Id",
+                        "Do not create a folder for the project"
+                    ],
+                    "scope": "window",
+                    "description": "Controls if a new sub-folder should be created for the newly generated project."
+                }
+            }
+        },
+        "commands": [
+            {
+                "command": "coc-spring-initializr.Command",
+                "title": "coc-spring-initializr command title"
+            }
+        ]
+    }
+}
