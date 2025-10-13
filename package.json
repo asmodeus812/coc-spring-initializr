@@ -1,6 +1,6 @@
 {
     "name": "coc-spring-initializr",
-    "version": "0.0.1",
+    "version": "0.0.2",
     "description": "Coc extension for creating spring & other projects",
     "author": "asmodeus812",
     "license": "MIT",
@@ -45,8 +45,7 @@
         "minimatch": "^5.1.6"
     },
     "activationEvents": [
-        "*",
-        "workspaceContains:.vim/NEWLY_CREATED_BY_SPRING_INITIALIZR"
+        "*"
     ],
     "contributes": {
         "configuration": {

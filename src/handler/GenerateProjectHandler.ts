@@ -1,12 +1,11 @@
 // Copyright (c) Microsoft Corporation. All rights reserved.
 // Licensed under the MIT license.
 
-import * as extract from "extract-zip";
-import * as fse from "fs-extra";
-import * as path from "path";
-import { URL } from "url";
 import * as coc from "coc.nvim";
+import * as extract from "extract-zip";
+import { URL } from "url";
 import { OperationCanceledError } from "../Errors";
+import { ProjectType } from "../model";
 import { downloadFile } from "../Utils";
 import { isDirectory, pathExists } from "../Utils/fsHelper";
 import { BaseHandler } from "./BaseHandler";
@@ -15,7 +14,6 @@ import { SpecifyArtifactIdStep } from "./SpecifyArtifactIdStep";
 import { SpecifyGroupIdStep } from "./SpecifyGroupIdStep";
 import { SpecifyPackageNameStep } from "./SpecifyPackageNameStep";
 import { SpecifyServiceUrlStep } from "./SpecifyServiceUrlStep";
-import { ProjectType } from "../model";
 
 const OPEN_IN_NEW_WORKSPACE = "Open";
 const CANCEL_OPEN_WORKSPACE = "Cancel";
@@ -57,10 +55,6 @@ export class GenerateProjectHandler extends BaseHandler {
 
         // Step: Download & Unzip
         await downloadAndUnzip(this.downloadUrl, this.outputUri);
-
-        // add a flag file marking it's newly created.
-        const flagFile = path.join(this.outputUri.fsPath, ".vim/NEWLY_CREATED_BY_SPRING_INITIALIZR");
-        await fse.createFile(flagFile);
 
         // Open project either is the same workspace or new workspace
         const hasOpenFolder = coc.workspace.workspaceFolders !== undefined || coc.workspace.root !== undefined;

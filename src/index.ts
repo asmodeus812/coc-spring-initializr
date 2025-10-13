@@ -70,20 +70,4 @@ export async function initializeExtension(context: coc.ExtensionContext): Promis
             true
         )
     );
-
-    if (coc.workspace.workspaceFolders?.length === 1) {
-        const flagFile = path.join(coc.workspace.workspaceFolders[0].uri, ".vim/NEWLY_CREATED_BY_SPRING_INITIALIZR");
-        try {
-            await fs.promises.access(flagFile);
-            const readmeFileUris = await coc.workspace.findFiles(
-                new coc.RelativePattern(coc.workspace.workspaceFolders[0], "{readme,README,help,HELP}.md")
-            );
-            if (readmeFileUris.length > 0) {
-                await coc.commands.executeCommand("markdown.showPreview", readmeFileUris[0]);
-            }
-            await fs.promises.unlink(flagFile);
-        } catch (error: any) {
-            coc.window.showWarningMessage(error?.message);
-        }
-    }
 }
