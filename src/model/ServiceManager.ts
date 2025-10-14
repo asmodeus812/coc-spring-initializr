@@ -7,6 +7,7 @@ import { IHandlerItem } from "../handler/HandlerInterfaces";
 import { downloadFile } from "../Utils";
 import { matchRange } from "../Utils/VersionHelper";
 import { DependencyGroup, Identifiable, MatadataType, Metadata } from "./Metadata";
+import { Progress, window } from "coc.nvim";
 
 /**
  * Prefer v2.2 and fallback to v2.1
@@ -86,8 +87,20 @@ class ServiceManager {
         url.pathname = "/dependencies";
         url.search = `?bootVersion=${bootVersion}`;
         const rawJSONString: string = await downloadFile(url.toString(), true, METADATA_HEADERS);
-        const ret = JSON.parse(rawJSONString);
-        return ret;
+        return JSON.parse(rawJSONString);
+    }
+
+    private async ensureMetadata(serviceUrl: string): Promise<Metadata | undefined> {
+        return await window.withProgress(
+            { title: `Fetching resources from ${serviceUrl}...` },
+            async (progress: Progress<{ message?: string }>) => {
+                if (this.metadataMap.get(serviceUrl) === undefined) {
+                    await this.fetch(serviceUrl);
+                    progress.report({ message: "Fetched remote resources" });
+                }
+                return this.metadataMap.get(serviceUrl);
+            }
+        );
     }
 
     private async fetch(serviceUrl: string): Promise<void> {
@@ -96,15 +109,8 @@ class ServiceManager {
             const metadata = JSON.parse(rawJSONString);
             this.metadataMap.set(serviceUrl, metadata);
         } catch (error) {
-            console.error(error);
+            window.showErrorMessage((error as Error).message);
         }
-    }
-
-    private async ensureMetadata(serviceUrl: string): Promise<Metadata | undefined> {
-        if (this.metadataMap.get(serviceUrl) === undefined) {
-            await this.fetch(serviceUrl);
-        }
-        return this.metadataMap.get(serviceUrl);
     }
 }
 

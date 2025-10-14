@@ -39,10 +39,13 @@ export class AddStartersHandler extends BaseHandler {
         if (this.serviceUrl === undefined) {
             return;
         }
-        const starters: IStarters = await coc.window.withProgress<IStarters>({ title: "Dependencies list" }, async (progress) => {
-            progress.report({ message: `Fetching metadata for ${bootVersion} ...` });
-            return await serviceManager.getStarters(this.serviceUrl as string, bootVersion);
-        });
+        const starters: IStarters = await coc.window.withProgress<IStarters>(
+            { title: "Downloading Dependencies list..." },
+            async (progress) => {
+                progress.report({ message: `Fetching new metadata for ${bootVersion}...` });
+                return await serviceManager.getStarters(this.serviceUrl as string, bootVersion);
+            }
+        );
 
         const oldStarterIds: string[] = [];
         if (!starters.dependencies) {
