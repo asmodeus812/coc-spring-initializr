@@ -27,7 +27,8 @@ export class AddStartersHandler extends BaseHandler {
 
         const deps: string[] = []; // gid:aid
         // Read pom.xml for $dependencies(gid, aid)
-        const content: string | undefined = coc.window.activeTextEditor?.document.content;
+        const baseDocument: coc.Document = await coc.workspace.openTextDocument(entry);
+        const content: string | undefined = baseDocument.textDocument.getText();
         const xml: { project: XmlNode } = await readXmlContent(content);
 
         getDependencyNodes(xml.project).forEach((elem) => {

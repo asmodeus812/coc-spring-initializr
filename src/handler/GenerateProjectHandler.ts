@@ -134,34 +134,13 @@ async function specifyTargetFolder(metadata: IProjectMetadata): Promise<coc.Uri 
 }
 
 async function downloadAndUnzip(targetUrl: string, targetFolder: coc.Uri): Promise<void> {
-    await coc.window.withProgress(
-        { title: "Downloading & unzipping" },
-        (progress: coc.Progress<{ message?: string }>) =>
-            new Promise<void>(async (resolve: () => void, reject: (e: Error) => void): Promise<void> => {
-                let filepath: string;
-                try {
-                    progress.report({ message: "Downloading project package..." });
-                    filepath = await downloadFile(targetUrl);
-                } catch (error: any) {
-                    coc.window.showErrorMessage("Unable to download project archive");
-                    return reject(error);
-                }
-
-                progress.report({ message: "Unzipping project archive..." });
-                await extract
-                    .default(filepath, { dir: targetFolder.fsPath })
-                    .then(() => {
-                        return resolve();
-                    })
-                    .catch((err) => {
-                        if (err) {
-                            coc.window.showErrorMessage("Unable to extract resources");
-                            return reject(err);
-                        }
-                        return resolve();
-                    });
-            })
-    );
+    await coc.window.withProgress({ title: "Downloading & unzipping..." }, async (progress: coc.Progress<{ message?: string }>) => {
+        let filepath: string;
+        progress.report({ message: "Downloading project package..." });
+        filepath = await downloadFile(targetUrl);
+        progress.report({ message: "Unzipping project archive..." });
+        return await extract.default(filepath, { dir: targetFolder.fsPath });
+    });
 }
 
 async function specifyOpenMethod(hasOpenFolder: boolean, projectLocation: coc.Uri): Promise<string> {

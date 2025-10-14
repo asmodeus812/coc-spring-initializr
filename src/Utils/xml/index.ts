@@ -9,7 +9,7 @@ import { platform } from "os";
 
 export async function updatePom(uri: coc.Uri, deps: IArtifact[], boms: IBom[]) {
     const edit: coc.WorkspaceEdit = { changes: {} };
-    const projectNode: Element = await getActiveProjectNode();
+    const projectNode: Element = await getActiveProjectNode(uri);
     const dependenciesNode: Element | undefined =
         projectNode.children && (projectNode.children.find((node) => isTag(node) && node.tagName === XmlTagName.Dependencies) as Element);
     if (dependenciesNode !== undefined) {
@@ -39,13 +39,9 @@ export async function updatePom(uri: coc.Uri, deps: IArtifact[], boms: IBom[]) {
     coc.workspace.applyEdit(edit);
 }
 
-async function getActiveProjectNode(): Promise<Element> {
-    if (!coc.window.activeTextEditor) {
-        throw new UserError("No POM file is open.");
-    }
-
-    // Find out <dependencies> node and insert content.
-    const content = coc.window.activeTextEditor.document.content;
+async function getActiveProjectNode(uri: coc.Uri): Promise<Element> {
+    const baseDocument: coc.Document = await coc.workspace.openTextDocument(uri);
+    const content: string | undefined = baseDocument.textDocument.getText();
     const projectNodes: Node[] = getNodesByTag(content, XmlTagName.Project);
     if (projectNodes === undefined || projectNodes.length !== 1) {
         throw new UserError("Only support POM file with single <project> node.");

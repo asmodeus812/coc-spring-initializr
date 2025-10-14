@@ -2,13 +2,11 @@
 // Licensed under the MIT license.
 
 "use strict";
-import * as coc from "coc.nvim";
-import * as fs from "fs";
-import * as path from "path";
-import { AddStartersHandler, GenerateProjectHandler } from "./handler";
-import { ProjectType } from "./model";
-import { getTargetPomXml, loadPackageInfo } from "./Utils";
-import { BaseHandler } from "./handler/BaseHandler";
+import * as coc from "coc.nvim"
+import { AddStartersHandler, GenerateProjectHandler } from "./handler"
+import { BaseHandler } from "./handler/BaseHandler"
+import { ProjectType } from "./model"
+import { getTargetPomXml, loadPackageInfo } from "./Utils"
 
 export async function activate(context: coc.ExtensionContext): Promise<void> {
     // await initializeFromJsonFile(context.asAbsolutePath("./package.json"));
