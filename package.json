@@ -139,8 +139,24 @@
         },
         "commands": [
             {
-                "command": "coc-spring-initializr.Command",
-                "title": "coc-spring-initializr command title"
+                "command": "spring.initializr.addStarters",
+                "title": "Add Spring Boot Starters"
+            },
+            {
+                "command": "spring.initializr.createProject",
+                "title": "Create Spring Boot Project"
+            },
+            {
+                "command": "spring.initializr.maven-project",
+                "title": "Generate Maven Project (Initializr)"
+            },
+            {
+                "command": "spring.initializr.gradle-project",
+                "title": "Generate Gradle Project (Initializr)"
+            },
+            {
+                "command": "spring.initializr.gradle-project-kotlin",
+                "title": "Generate Gradle Kotlin Project (Initializr)"
             }
         ]
     }
