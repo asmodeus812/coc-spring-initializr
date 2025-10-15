@@ -3,11 +3,13 @@
 
 import * as coc from "coc.nvim";
 import * as extract from "extract-zip";
+import * as fse from "fs-extra";
+import * as path from "path";
 import { URL } from "url";
 import { OperationCanceledError } from "../Errors";
 import { ProjectType } from "../model";
 import { downloadFile } from "../Utils";
-import { isDirectory, pathExists } from "../Utils/fsHelper";
+import { isDirectory } from "../Utils/fsHelper";
 import { BaseHandler } from "./BaseHandler";
 import { IDefaultProjectData, IProjectMetadata, IStep, ParentFolder } from "./HandlerInterfaces";
 import { SpecifyArtifactIdStep } from "./SpecifyArtifactIdStep";
@@ -96,41 +98,49 @@ export class GenerateProjectHandler extends BaseHandler {
 }
 
 async function specifyTargetFolder(metadata: IProjectMetadata): Promise<coc.Uri | undefined> {
+    const OPTION_CANCEL: string = "Cancel";
     const OPTION_CONTINUE: string = "Continue";
     const OPTION_CHOOSE_ANOTHER_FOLDER: string = "Choose another folder";
     const LABEL_CHOOSE_FOLDER: string = "Generate into this folder";
     const useArtifactId: boolean = metadata.parentFolder === ParentFolder.ARTIFACT_ID;
 
-    let outputUri: coc.Uri | undefined = metadata.defaults.targetFolder
-        ? coc.Uri.file(metadata.defaults.targetFolder)
-        : await requireInputFolder(LABEL_CHOOSE_FOLDER, LABEL_CHOOSE_FOLDER);
-
-    if (outputUri && useArtifactId) {
-        outputUri = coc.Uri.file(`${outputUri.fsPath}/${metadata.artifactId}`);
+    if (!metadata.defaults.targetFolder) {
+        const workspaceFolderPath: string = coc.workspace.workspaceFolders?.[0]?.uri;
+        metadata.defaults.targetFolder = coc.Uri.parse(workspaceFolderPath).fsPath;
     }
 
-    const MESSAGE_EXISTING_FOLDER: string = `A folder [${outputUri?.fsPath}] already exists in the selected folder.`;
-    const MESSAGE_FOLDER_NOT_EMPTY: string = `The folder [${outputUri?.fsPath}] is not empty. Existing files with same names will be overwritten.`;
+    let outputUri: string = metadata.defaults.targetFolder;
+    if (useArtifactId !== undefined) {
+        outputUri = path.join(`${outputUri}/${metadata.artifactId}`);
+    }
+
+    const MESSAGE_EXISTING_FOLDER: string = `A folder [${outputUri}] already exists in the selected folder.`;
+    const MESSAGE_FOLDER_NOT_EMPTY: string = `The folder [${outputUri}] is not empty. Existing files with same names will be overwritten.`;
     const MESSAGE: string = useArtifactId ? MESSAGE_EXISTING_FOLDER : MESSAGE_FOLDER_NOT_EMPTY;
 
     // If not using Artifact Id as folder name, we assume any existing files with same names will be overwritten
     // So we check if the folder is not empty, to avoid deleting files without user's consent
-    while (
-        (!useArtifactId && outputUri && (await isDirectory(outputUri))) ||
-        (useArtifactId && outputUri && (await pathExists(outputUri)))
-    ) {
+    while (await isDirectory(outputUri)) {
         const overrideChoice: string | undefined = await coc.window.showWarningMessage(
             MESSAGE,
+            OPTION_CHOOSE_ANOTHER_FOLDER,
             OPTION_CONTINUE,
-            OPTION_CHOOSE_ANOTHER_FOLDER
+            OPTION_CANCEL
         );
-        if (overrideChoice === OPTION_CHOOSE_ANOTHER_FOLDER) {
-            outputUri = await requireInputFolder(LABEL_CHOOSE_FOLDER, LABEL_CHOOSE_FOLDER);
+        if (overrideChoice === OPTION_CANCEL) {
+            return undefined;
+        } else if (overrideChoice === OPTION_CHOOSE_ANOTHER_FOLDER) {
+            const userInput: coc.Uri | undefined = await requireInputFolder(LABEL_CHOOSE_FOLDER, LABEL_CHOOSE_FOLDER, outputUri);
+            if (userInput === undefined) {
+                return undefined;
+            }
+            outputUri = userInput.fsPath;
         } else {
             break;
         }
     }
-    return outputUri;
+    await fse.ensureDir(outputUri);
+    return coc.Uri.parse(outputUri);
 }
 
 async function downloadAndUnzip(targetUrl: string, targetFolder: coc.Uri): Promise<void> {
@@ -161,14 +171,10 @@ async function specifyOpenMethod(hasOpenFolder: boolean, projectLocation: coc.Ur
     return openMethod;
 }
 
-async function requireInputFolder(title: string, prompt: string): Promise<coc.Uri | undefined> {
-    const input: string | undefined = await coc.window.requestInput(
-        title,
-        coc.workspace.workspaceFolders && coc.workspace.workspaceFolders.length > 0 ? coc.workspace.workspaceFolders[0].uri : undefined,
-        {
-            placeholder: prompt
-        }
-    );
+async function requireInputFolder(title: string, prompt: string, _default: string): Promise<coc.Uri | undefined> {
+    const input: string | undefined = await coc.window.requestInput(title, _default, {
+        placeholder: prompt
+    });
 
     if (input === undefined) {
         return;

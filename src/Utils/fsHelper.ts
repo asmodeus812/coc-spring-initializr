@@ -4,25 +4,28 @@
 import { Uri } from "coc.nvim";
 import * as fse from "fs-extra";
 
-export async function isDirectory(uri: Uri): Promise<boolean | undefined> {
+export async function isDirectory(uri: Uri | string): Promise<boolean | undefined> {
     try {
-        return (await fse.stat(uri.fsPath)).isDirectory();
+        const path = typeof uri === "string" ? uri : uri.fsPath;
+        return (await fse.stat(path)).isDirectory();
     } catch (error) {
         return false;
     }
 }
 
-export async function isFile(uri: Uri): Promise<boolean | undefined> {
+export async function isFile(uri: Uri | string): Promise<boolean | undefined> {
     try {
-        return (await fse.stat(uri.fsPath)).isFile();
+        const path = typeof uri === "string" ? uri : uri.fsPath;
+        return (await fse.stat(path)).isFile();
     } catch (error) {
         return false;
     }
 }
 
-export async function pathExists(uri: Uri): Promise<boolean> {
+export async function pathExists(uri: Uri | string): Promise<boolean> {
     try {
-        await fse.exists(uri.fsPath);
+        const path = typeof uri === "string" ? uri : uri.fsPath;
+        await fse.exists(path);
         return true;
     } catch (error) {
         return false;
