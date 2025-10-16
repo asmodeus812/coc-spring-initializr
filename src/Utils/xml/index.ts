@@ -76,7 +76,7 @@ async function updateWorkspaceEdit(
         insertPos = insPosLineStart;
     }
 
-    await coc.commands.executeCommand("vscode.open", currentDocument.uri);
+    await focusCurrentResource(currentDocument.uri);
     const textEditor: coc.TextEditor = coc.window.activeTextEditor as coc.TextEditor;
     const options: coc.TextEditorOptions = textEditor.options;
     const indent: string = options.insertSpaces ? " ".repeat(options.tabSize) : "\t";
@@ -151,6 +151,29 @@ class DependencyNodes extends PomNode {
         ].filter(Boolean) as string[];
         return PomNode.wrapWithParentNode(lines, indent, "dependency");
     }
+}
+
+export async function focusCurrentResource(location: coc.Uri | string, alternateWindowId?: number, openCommand?: string): Promise<void> {
+    const stringUri: string = typeof location === "string" ? location : location.toString();
+    const textEditor: coc.TextEditor | undefined = coc.window.activeTextEditor;
+    if (textEditor?.document.uri !== stringUri) {
+        let visibleEditor: coc.TextEditor | undefined = undefined;
+        for (const editor of coc.window.visibleTextEditors) {
+            if (stringUri === editor?.document.uri) {
+                visibleEditor = editor;
+                break;
+            }
+        }
+        if (visibleEditor?.winid) {
+            await coc.workspace.nvim.call("win_gotoid", [visibleEditor.winid]);
+            return;
+        }
+    }
+
+    if (alternateWindowId !== undefined) {
+        await coc.workspace.nvim.call("win_gotoid", [alternateWindowId]);
+    }
+    await coc.workspace.jumpTo(location, null, openCommand);
 }
 
 class BOMNodes extends PomNode {

@@ -16,6 +16,7 @@ import { SpecifyArtifactIdStep } from "./SpecifyArtifactIdStep";
 import { SpecifyGroupIdStep } from "./SpecifyGroupIdStep";
 import { SpecifyPackageNameStep } from "./SpecifyPackageNameStep";
 import { SpecifyServiceUrlStep } from "./SpecifyServiceUrlStep";
+import { focusCurrentResource } from "../Utils/xml";
 
 const OPEN_IN_NEW_WORKSPACE = "Open";
 const CANCEL_OPEN_WORKSPACE = "Cancel";
@@ -71,7 +72,7 @@ export class GenerateProjectHandler extends BaseHandler {
         }
 
         if ((await specifyOpenMethod(hasOpenFolder, this.outputUri)) === OPEN_IN_NEW_WORKSPACE) {
-            coc.commands.executeCommand("vscode.open", this.outputUri.fsPath);
+            await focusCurrentResource(this.outputUri);
         }
     }
 
