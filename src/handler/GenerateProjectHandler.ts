@@ -65,8 +65,8 @@ export class GenerateProjectHandler extends BaseHandler {
         // Don't prompt to open projectLocation if it's already a currently opened folder
         if (
             hasOpenFolder &&
-            (coc.workspace.workspaceFolders.some((folder) => folder.uri === this.outputUri?.fsPath) ||
-                coc.workspace.root === this.outputUri.fsPath)
+            (coc.workspace.workspaceFolders.some((folder) => folder.uri === this.outputUri?.toString()) ||
+                coc.workspace.root === this.outputUri?.toString())
         ) {
             return;
         }
