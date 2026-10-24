@@ -19,6 +19,7 @@ import { SpecifyArtifactIdStep } from "./SpecifyArtifactIdStep";
 import { SpecifyGroupIdStep } from "./SpecifyGroupIdStep";
 import { SpecifyPackageNameStep } from "./SpecifyPackageNameStep";
 import { SpecifyServiceUrlStep } from "./SpecifyServiceUrlStep";
+import { readInput } from "./utils";
 import { focusCurrentResource } from "../Utils/xml";
 
 const OPEN_IN_NEW_WORKSPACE = "Open";
@@ -233,9 +234,7 @@ async function specifyOpenMethod(hasOpenFolder: boolean, projectLocation: coc.Ur
 }
 
 async function requireInputFolder(title: string, prompt: string, _default: string): Promise<coc.Uri | undefined> {
-    const input: string | undefined = await coc.window.requestInput(title, _default, {
-        placeholder: prompt
-    });
+    const input: string | undefined = await readInput(title, _default, prompt);
 
     if (input === undefined) {
         return;

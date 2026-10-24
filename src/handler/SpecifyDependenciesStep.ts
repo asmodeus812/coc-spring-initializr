@@ -3,6 +3,7 @@
 
 import { QuickPickItem, window } from "coc.nvim";
 import { DependencyManager, IDependenciesItem } from "../DependencyManager";
+import { OperationCanceledError } from "../Errors";
 import { IProjectMetadata, IStep } from "./HandlerInterfaces";
 
 export class SpecifyDependenciesStep implements IStep {
@@ -47,6 +48,8 @@ export class SpecifyDependenciesStep implements IStep {
             projectMetadata.dependencies = current;
             dependencyManager.updateLastUsedDependencies(current);
             result = true;
+        } else {
+            throw new OperationCanceledError("Dependencies not specified.");
         }
         return result;
     }

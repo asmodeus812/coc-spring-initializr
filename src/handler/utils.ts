@@ -16,6 +16,34 @@ import { SpecifyPackagingStep } from "./SpecifyPackagingStep";
 import { SpecifyServiceUrlStep } from "./SpecifyServiceUrlStep";
 
 const DEFAULT_SERVICE_URL: string = "https://start.spring.io";
+const INPUT_CANCELED: string = "<coc-spring-initializr:canceled>";
+
+// ask for a line of text; undefined when the user cancels: <Esc>, <C-c> (coc rejects with "Keyboard interrupt")
+// or an empty answer. With coc.preferences.promptInput off coc reads the text with the cmdline input(), where <Esc>
+// returns the typed text, so on Neovim the prompt is shown here with a cancelreturn that <Esc> yields instead
+export async function readInput(title: string, value: string | undefined, placeholder?: string): Promise<string | undefined> {
+    let input: string | null | undefined;
+    try {
+        const promptInput: boolean = coc.workspace.getConfiguration("coc.preferences").get<boolean>("promptInput", true);
+        if (coc.workspace.isNvim && !(promptInput && coc.workspace.env.dialog)) {
+            input = (await coc.workspace.nvim.call("input", [{ prompt: `${title}: `, default: value ?? "", cancelreturn: INPUT_CANCELED }])) as string;
+            coc.workspace.nvim.command("normal! :<C-u>", true);
+        } else {
+            input = await window.requestInput(title, value, { placeholder });
+        }
+    } catch (error: any) {
+        if (/Keyboard interrupt/i.test(String(error?.message ?? error))) {
+            input = undefined;
+        } else {
+            throw error;
+        }
+    }
+    let result: string | undefined;
+    if (typeof input === "string" && input !== INPUT_CANCELED && input.trim() !== "") {
+        result = input;
+    }
+    return result;
+}
 
 export async function specifyServiceUrl(projectMetadata?: IProjectMetadata): Promise<string | undefined> {
     const configValue: string | string[] = coc.workspace.getConfiguration("spring.initializr").get<string | string[]>("serviceUrl", []);
@@ -50,7 +78,7 @@ export async function createPickBox<T extends Identifiable>(pickMetadata: IPickM
         } else if (pickMetadata.pickStep instanceof SpecifyBootVersionStep) {
             throw new OperationCanceledError("BootVersion not specified.");
         }
-        return false;
+        throw new OperationCanceledError("Selection not specified.");
     } else {
         if (pickMetadata.pickStep instanceof SpecifyLanguageStep) {
             pickMetadata.metadata.language = selected.label?.toLowerCase();
@@ -67,9 +95,7 @@ export async function createPickBox<T extends Identifiable>(pickMetadata: IPickM
 }
 
 export async function createInputBox(inputMetaData: IInputMetaData): Promise<boolean> {
-    const input: string | undefined = await window.requestInput(inputMetaData.prompt, inputMetaData.defaultValue, {
-        placeholder: inputMetaData.placeholder
-    });
+    const input: string | undefined = await readInput(inputMetaData.prompt, inputMetaData.defaultValue, inputMetaData.placeholder);
 
     if (input === undefined) {
         if (inputMetaData.pickStep instanceof SpecifyGroupIdStep) {
@@ -79,7 +105,7 @@ export async function createInputBox(inputMetaData: IInputMetaData): Promise<boo
         } else if (inputMetaData.pickStep instanceof SpecifyPackageNameStep) {
             throw new OperationCanceledError("PackageName not specified.");
         }
-        return false;
+        throw new OperationCanceledError("Input not specified.");
     }
 
     if (inputMetaData.pickStep instanceof SpecifyGroupIdStep) {
