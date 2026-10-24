@@ -3,7 +3,7 @@
 
 import { QuickPickItem } from "coc.nvim";
 import { IDependency, serviceManager } from "./model";
-import { readFileFromExtensionRoot, writeFileToExtensionRoot } from "./Utils";
+import { readFileFromStorage, writeFileToStorage } from "./Utils";
 
 const DEPENDENCIES_HISTORY_FILENAME: string = ".last_used_dependencies";
 
@@ -16,7 +16,7 @@ export class DependencyManager {
     constructor(public bootVersion: string) {}
 
     public updateLastUsedDependencies(v: IDependenciesItem): void {
-        writeFileToExtensionRoot(DEPENDENCIES_HISTORY_FILENAME, v.id);
+        writeFileToStorage(DEPENDENCIES_HISTORY_FILENAME, v.id);
         this.lastselected = v.id;
     }
 
@@ -27,7 +27,7 @@ export class DependencyManager {
                 this.dict[dep.id] = dep;
             }
         }
-        const idList: string | null = await readFileFromExtensionRoot(DEPENDENCIES_HISTORY_FILENAME);
+        const idList: string | null = await readFileFromStorage(DEPENDENCIES_HISTORY_FILENAME);
         this.lastselected = idList;
     }
 

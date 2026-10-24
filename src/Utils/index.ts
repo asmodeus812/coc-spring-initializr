@@ -16,6 +16,7 @@ let EXTENSION_PUBLISHER: string;
 let EXTENSION_NAME: string;
 let EXTENSION_VERSION: string;
 let EXTENSION_AI_KEY: string;
+let EXTENSION_STORAGE_PATH: string;
 
 export async function loadPackageInfo(context: coc.ExtensionContext): Promise<void> {
     const { publisher, name, version, aiKey } = await fse.readJSON(context.asAbsolutePath("./package.json"));
@@ -23,6 +24,7 @@ export async function loadPackageInfo(context: coc.ExtensionContext): Promise<vo
     EXTENSION_PUBLISHER = publisher;
     EXTENSION_NAME = name;
     EXTENSION_VERSION = version;
+    EXTENSION_STORAGE_PATH = context.storagePath;
 }
 
 export function getExtensionId(): string {
@@ -90,24 +92,14 @@ export async function downloadFile(targetUrl: string, readContent?: boolean, cus
     });
 }
 
-export async function writeFileToExtensionRoot(relateivePath: string, data: string | Buffer): Promise<void> {
-    const extension: coc.Extension<any> | undefined = coc.extensions.getExtensionById(getExtensionId());
-    const extensionRootPath: string | undefined = extension?.extensionPath;
-    if (!extensionRootPath || extensionRootPath === undefined) {
-        return;
-    }
-    const filepath: string = path.join(extensionRootPath, relateivePath);
+export async function writeFileToStorage(relativePath: string, data: string | Buffer): Promise<void> {
+    const filepath: string = path.join(EXTENSION_STORAGE_PATH, relativePath);
     await fse.ensureFile(filepath);
     await fse.writeFile(filepath, data);
 }
 
-export async function readFileFromExtensionRoot(relateivePath: string): Promise<string | null> {
-    const extension: coc.Extension<any> | undefined = coc.extensions.getExtensionById(getExtensionId());
-    const extensionRootPath: string | undefined = extension?.extensionPath;
-    if (!extensionRootPath || extensionRootPath === undefined) {
-        return null;
-    }
-    const filepath: string = path.join(extensionRootPath, relateivePath);
+export async function readFileFromStorage(relativePath: string): Promise<string | null> {
+    const filepath: string = path.join(EXTENSION_STORAGE_PATH, relativePath);
     if (await fse.pathExists(filepath)) {
         const buf: Buffer = await fse.readFile(filepath);
         return buf.toString();
