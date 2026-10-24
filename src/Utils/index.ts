@@ -40,14 +40,33 @@ export function getTempFolder(): string {
     return path.join(os.tmpdir(), getExtensionId());
 }
 
+const MAX_REDIRECTS: number = 5;
+
 export async function downloadFile(targetUrl: string, readContent?: boolean, customHeaders?: {}): Promise<string> {
     const tempFilePath: string = path.join(getTempFolder(), md5(targetUrl));
     await fse.ensureDir(getTempFolder());
     if (await fse.pathExists(tempFilePath)) {
         await fse.remove(tempFilePath);
     }
+    return await requestFile(targetUrl, tempFilePath, MAX_REDIRECTS, readContent, customHeaders);
+}
 
-    return await new Promise((resolve: (res: string) => void, reject: (e: Error) => void): void => {
+// the service's error text: the "message" field of a JSON body, else the status text
+function errorMessage(res: http.IncomingMessage, body: string): string {
+    let message: string = `${res.statusCode} ${res.statusMessage || ""}`.trim();
+    try {
+        const parsed: any = JSON.parse(body);
+        if (parsed && typeof parsed.message === "string" && parsed.message.length > 0) {
+            message = parsed.message;
+        }
+    } catch {
+        // not JSON, keep the status text
+    }
+    return message;
+}
+
+function requestFile(targetUrl: string, tempFilePath: string, redirects: number, readContent?: boolean, customHeaders?: {}): Promise<string> {
+    return new Promise((resolve: (res: string) => void, reject: (e: Error) => void): void => {
         const urlObj: url.Url = url.parse(targetUrl);
         const options = { headers: { ...customHeaders, "User-Agent": `vscode/${getVersion()}` }, ...urlObj };
         let client: any;
@@ -61,30 +80,50 @@ export async function downloadFile(targetUrl: string, readContent?: boolean, cus
         }
         client
             .get(options, (res: http.IncomingMessage) => {
-                let rawData: string;
-                let ws: fse.WriteStream;
-                if (readContent) {
-                    rawData = "";
+                const status: number = res.statusCode || 0;
+                const location: string | undefined = res.headers.location;
+                if (status >= 300 && status < 400 && location) {
+                    res.resume();
+                    if (redirects > 0) {
+                        const next: string = new URL(location, targetUrl).toString();
+                        requestFile(next, tempFilePath, redirects - 1, readContent, customHeaders).then(resolve, reject);
+                    } else {
+                        reject(new Error(`Too many redirects (${MAX_REDIRECTS}) for ${targetUrl}`));
+                    }
+                } else if (status >= 400) {
+                    let body: string = "";
+                    res.setEncoding("utf8");
+                    res.on("data", (chunk: string) => {
+                        body += chunk;
+                    });
+                    res.on("end", () => reject(new Error(errorMessage(res, body))));
+                    res.on("error", (err: Error) => reject(err));
                 } else {
-                    ws = fse.createWriteStream(tempFilePath);
+                    let rawData: string;
+                    let ws: fse.WriteStream;
+                    if (readContent) {
+                        rawData = "";
+                    } else {
+                        ws = fse.createWriteStream(tempFilePath);
+                    }
+                    res.on("data", (chunk: string | Buffer) => {
+                        if (readContent) {
+                            rawData += chunk;
+                        } else {
+                            ws.write(chunk);
+                        }
+                    });
+                    res.on("end", () => {
+                        if (readContent) {
+                            resolve(rawData);
+                        } else {
+                            ws.end();
+                            ws.on("close", () => {
+                                resolve(tempFilePath);
+                            });
+                        }
+                    });
                 }
-                res.on("data", (chunk: string | Buffer) => {
-                    if (readContent) {
-                        rawData += chunk;
-                    } else {
-                        ws.write(chunk);
-                    }
-                });
-                res.on("end", () => {
-                    if (readContent) {
-                        resolve(rawData);
-                    } else {
-                        ws.end();
-                        ws.on("close", () => {
-                            resolve(tempFilePath);
-                        });
-                    }
-                });
             })
             .on("error", (err: Error) => {
                 reject(err);
