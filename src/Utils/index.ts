@@ -178,7 +178,7 @@ function getRelativePathToWorkspaceFolder(file: coc.Uri): string {
     if (file) {
         const wf: coc.WorkspaceFolder | undefined = coc.workspace.getWorkspaceFolder(file);
         if (wf) {
-            return path.relative(wf.uri, file.fsPath);
+            return path.relative(coc.Uri.parse(wf.uri).fsPath, file.fsPath);
         }
     }
     return "";
