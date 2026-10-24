@@ -141,8 +141,11 @@ async function specifyTargetFolder(metadata: IProjectMetadata): Promise<coc.Uri 
                 return undefined;
             }
             outputUri = userInput.fsPath;
-        } else {
+        } else if (overrideChoice === OPTION_CONTINUE) {
             break;
+        } else {
+            // the warning was dismissed without a choice: end the wizard quietly
+            return undefined;
         }
     }
     await fse.ensureDir(outputUri);
