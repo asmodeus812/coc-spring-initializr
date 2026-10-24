@@ -48,7 +48,7 @@ export function removeDependencyNode(projectNode: XmlNode, groupId: string, arti
 export function getDependencyNodes(projectNode: XmlNode): IDependencyNode[] {
     const dependenciesNode: XmlNode = getNode(projectNode, "dependencies", {});
     if (dependenciesNode.dependency) {
-        return [].concat(dependenciesNode.dependency);
+        return ([] as IDependencyNode[]).concat(dependenciesNode.dependency as IDependencyNode[]);
     } else {
         return [];
     }

@@ -18,6 +18,7 @@
     "scripts": {
         "watch": "node esbuild.mjs --watch",
         "build": "node esbuild.mjs",
+        "typecheck": "tsc --noEmit -p .",
         "prepare": "node esbuild.mjs"
     },
     "devDependencies": {
