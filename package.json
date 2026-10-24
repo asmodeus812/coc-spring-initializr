@@ -22,11 +22,11 @@
         "prepare": "node esbuild.mjs"
     },
     "devDependencies": {
+        "@types/yauzl": "^3.4.0",
         "coc.nvim": "^0.0.83-next.18",
         "copy-webpack-plugin": "^11.0.0",
         "domhandler": "^6.0.1",
         "esbuild": "^0.15.13",
-        "extract-zip": "^2.0.1",
         "glob": "^7.2.3",
         "htmlparser2": "^12.0.0",
         "md5": "^2.3.0",
@@ -43,7 +43,8 @@
         "development": "^0.0.6",
         "fs-extra": "^11.4.1",
         "lodash": "^4.18.1",
-        "minimatch": "^5.1.6"
+        "minimatch": "^5.1.6",
+        "yauzl": "^3.4.0"
     },
     "activationEvents": [
         "*"

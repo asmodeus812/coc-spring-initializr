@@ -2,10 +2,13 @@
 // Licensed under the MIT license.
 
 import * as coc from "coc.nvim";
-import * as extract from "extract-zip";
+import { createWriteStream } from "fs";
 import * as fse from "fs-extra";
 import * as path from "path";
+import { Readable } from "stream";
+import { pipeline } from "stream/promises";
 import { URL } from "url";
+import * as yauzl from "yauzl";
 import { OperationCanceledError } from "../Errors";
 import { ProjectType } from "../model";
 import { downloadFile } from "../Utils";
@@ -20,6 +23,7 @@ import { focusCurrentResource } from "../Utils/xml";
 
 const OPEN_IN_NEW_WORKSPACE = "Open";
 const CANCEL_OPEN_WORKSPACE = "Cancel";
+const UNZIP_TIMEOUT_IN_MS = 2 * 60 * 1000;
 
 export class GenerateProjectHandler extends BaseHandler {
     private readonly projectType: ProjectType;
@@ -150,8 +154,64 @@ async function downloadAndUnzip(targetUrl: string, targetFolder: coc.Uri): Promi
         progress.report({ message: "Downloading project package..." });
         filepath = await downloadFile(targetUrl);
         progress.report({ message: "Unzipping project archive..." });
-        return await extract.default(filepath, { dir: targetFolder.fsPath });
+        await unzipWithTimeout(filepath, targetFolder.fsPath);
     });
+}
+
+interface IExtraction {
+    aborted: boolean;
+    zip?: yauzl.ZipFile;
+    stream?: Readable;
+}
+
+// coc runs extensions without AbortController, the timeout closes the archive and the open entry stream instead
+async function unzipWithTimeout(filepath: string, targetFolder: string): Promise<void> {
+    const extraction: IExtraction = { aborted: false };
+    let timer: NodeJS.Timeout | undefined;
+    const timeout = new Promise<never>((_, reject: (e: Error) => void) => {
+        timer = setTimeout(() => {
+            extraction.aborted = true;
+            extraction.stream?.destroy();
+            extraction.zip?.close();
+            reject(new Error("Timed out while unzipping the generated project."));
+        }, UNZIP_TIMEOUT_IN_MS);
+    });
+    try {
+        await Promise.race([extractZip(filepath, targetFolder, extraction), timeout]);
+    } finally {
+        clearTimeout(timer);
+    }
+}
+
+async function extractZip(filepath: string, targetFolder: string, extraction: IExtraction): Promise<void> {
+    const zip: yauzl.ZipFile = await yauzl.openPromise(filepath, { strictFileNames: true, validateEntrySizes: true });
+    const targetRoot: string = path.resolve(targetFolder);
+    extraction.zip = zip;
+    try {
+        for await (const entry of zip.eachEntry()) {
+            if (extraction.aborted) {
+                throw new Error("Zip extraction aborted.");
+            }
+            const targetPath: string = path.resolve(targetRoot, entry.fileName);
+            if (targetPath !== targetRoot && !targetPath.startsWith(`${targetRoot}${path.sep}`)) {
+                throw new Error(`Invalid zip entry path: ${entry.fileName}`);
+            }
+
+            if (entry.fileName.endsWith("/")) {
+                await fse.ensureDir(targetPath);
+            } else {
+                await fse.ensureDir(path.dirname(targetPath));
+                extraction.stream = await zip.openReadStreamPromise(entry);
+                await pipeline(extraction.stream, createWriteStream(targetPath));
+                const mode: number = (entry.externalFileAttributes >>> 16) & 0xffff;
+                if (mode !== 0) {
+                    await fse.chmod(targetPath, mode);
+                }
+            }
+        }
+    } finally {
+        zip.close();
+    }
 }
 
 async function specifyOpenMethod(hasOpenFolder: boolean, projectLocation: coc.Uri): Promise<string> {
