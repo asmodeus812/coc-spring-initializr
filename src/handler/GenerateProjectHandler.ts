@@ -9,7 +9,7 @@ import { URL } from "url";
 import { OperationCanceledError } from "../Errors";
 import { ProjectType } from "../model";
 import { downloadFile } from "../Utils";
-import { isDirectory } from "../Utils/fsHelper";
+import { isDirectory, isNonEmptyDirectory } from "../Utils/fsHelper";
 import { BaseHandler } from "./BaseHandler";
 import { IDefaultProjectData, IProjectMetadata, IStep, ParentFolder } from "./HandlerInterfaces";
 import { SpecifyArtifactIdStep } from "./SpecifyArtifactIdStep";
@@ -111,7 +111,7 @@ async function specifyTargetFolder(metadata: IProjectMetadata): Promise<coc.Uri 
     }
 
     let outputUri: string = metadata.defaults.targetFolder;
-    if (useArtifactId !== undefined) {
+    if (useArtifactId) {
         outputUri = path.join(`${outputUri}/${metadata.artifactId}`);
     }
 
@@ -121,7 +121,7 @@ async function specifyTargetFolder(metadata: IProjectMetadata): Promise<coc.Uri 
 
     // If not using Artifact Id as folder name, we assume any existing files with same names will be overwritten
     // So we check if the folder is not empty, to avoid deleting files without user's consent
-    while (await isDirectory(outputUri)) {
+    while (useArtifactId ? await isDirectory(outputUri) : await isNonEmptyDirectory(outputUri)) {
         const overrideChoice: string | undefined = await coc.window.showWarningMessage(
             MESSAGE,
             OPTION_CHOOSE_ANOTHER_FOLDER,

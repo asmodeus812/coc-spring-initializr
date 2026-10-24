@@ -13,6 +13,15 @@ export async function isDirectory(uri: Uri | string): Promise<boolean | undefine
     }
 }
 
+export async function isNonEmptyDirectory(uri: Uri | string): Promise<boolean> {
+    try {
+        const path = typeof uri === "string" ? uri : uri.fsPath;
+        return (await fse.readdir(path)).length > 0;
+    } catch (error) {
+        return false;
+    }
+}
+
 export async function isFile(uri: Uri | string): Promise<boolean | undefined> {
     try {
         const path = typeof uri === "string" ? uri : uri.fsPath;
