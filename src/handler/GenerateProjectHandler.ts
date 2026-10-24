@@ -141,7 +141,7 @@ async function specifyTargetFolder(metadata: IProjectMetadata): Promise<coc.Uri 
         }
     }
     await fse.ensureDir(outputUri);
-    return coc.Uri.parse(outputUri);
+    return coc.Uri.file(outputUri);
 }
 
 async function downloadAndUnzip(targetUrl: string, targetFolder: coc.Uri): Promise<void> {
@@ -180,5 +180,5 @@ async function requireInputFolder(title: string, prompt: string, _default: strin
     if (input === undefined) {
         return;
     }
-    return coc.Uri.parse(input);
+    return coc.Uri.file(input);
 }
