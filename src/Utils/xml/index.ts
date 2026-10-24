@@ -5,17 +5,35 @@ import { Element, isTag, Node } from "domhandler";
 import * as coc from "coc.nvim";
 import { UserError } from "../error";
 import { getNodesByTag, XmlTagName } from "./lexer";
-import { platform } from "os";
+import * as fs from "fs";
 
+interface PomText {
+    text: string;
+    eol: string;
+    indent: string;
+    document: coc.Document | undefined;
+}
+
+interface PomInsert {
+    offset: number;
+    text: string;
+}
+
+/**
+ * Adds the dependencies and BOMs to the pom, whatever its editor state: a loaded document (focused, in another
+ * window or in the background) is edited in its buffer, a pom that is not open is edited on disk without loading
+ * it. Neither depends on the active editor nor focuses a window.
+ */
 export async function updatePom(uri: coc.Uri, deps: IArtifact[], boms: IBom[]) {
-    const edit: coc.WorkspaceEdit = { changes: {} };
-    const projectNode: Element = await getActiveProjectNode(uri);
+    const pom: PomText = await readPom(uri);
+    const inserts: PomInsert[] = [];
+    const projectNode: Element = getProjectNode(pom.text);
     const dependenciesNode: Element | undefined =
         projectNode.children && (projectNode.children.find((node) => isTag(node) && node.tagName === XmlTagName.Dependencies) as Element);
     if (dependenciesNode !== undefined) {
-        await updateWorkspaceEdit(edit, uri, dependenciesNode, new DependencyNodes(deps));
+        inserts.push(insertInto(pom, dependenciesNode, new DependencyNodes(deps)));
     } else {
-        await updateWorkspaceEdit(edit, uri, projectNode, new DependencyNodes(deps, { initParent: true }));
+        inserts.push(insertInto(pom, projectNode, new DependencyNodes(deps, { initParent: true })));
     }
 
     if (boms && boms.length > 0) {
@@ -27,21 +45,52 @@ export async function updatePom(uri: coc.Uri, deps: IArtifact[], boms: IBom[]) {
                 depMgmtNode.children &&
                 (depMgmtNode.children.find((node) => isTag(node) && node.tagName === XmlTagName.Dependencies) as Element);
             if (depsNodes !== undefined) {
-                await updateWorkspaceEdit(edit, uri, depsNodes, new BOMNodes(boms));
+                inserts.push(insertInto(pom, depsNodes, new BOMNodes(boms)));
             } else {
-                await updateWorkspaceEdit(edit, uri, depMgmtNode, new BOMNodes(boms, { parents: ["dependencies"] }));
+                inserts.push(insertInto(pom, depMgmtNode, new BOMNodes(boms, { parents: ["dependencies"] })));
             }
         } else {
-            await updateWorkspaceEdit(edit, uri, projectNode, new BOMNodes(boms, { parents: ["dependencies", "dependencyManagement"] }));
+            inserts.push(insertInto(pom, projectNode, new BOMNodes(boms, { parents: ["dependencies", "dependencyManagement"] })));
         }
     }
 
-    await coc.workspace.applyEdit(edit);
+    if (pom.document !== undefined) {
+        const textDocument: coc.TextDocument = pom.document.textDocument;
+        const edits: coc.TextEdit[] = inserts.map((ins) => coc.TextEdit.insert(textDocument.positionAt(ins.offset), ins.text));
+        await coc.workspace.applyEdit({ changes: { [textDocument.uri]: edits } });
+    } else {
+        let text: string = pom.text;
+        for (const ins of [...inserts].sort((x, y) => y.offset - x.offset)) {
+            text = text.slice(0, ins.offset) + ins.text + text.slice(ins.offset);
+        }
+        await fs.promises.writeFile(uri.fsPath, text, "utf8");
+    }
 }
 
-async function getActiveProjectNode(uri: coc.Uri): Promise<Element> {
-    const baseDocument: coc.Document = await coc.workspace.openTextDocument(uri);
-    const content: string | undefined = baseDocument.textDocument.getText();
+async function readPom(uri: coc.Uri): Promise<PomText> {
+    const document: coc.Document | null | undefined = coc.workspace.getDocument(uri.toString());
+    let pom: PomText;
+    if (document && document.attached) {
+        const text: string = document.textDocument.getText();
+        const options: coc.FormattingOptions = await coc.workspace.getFormatOptions(document.uri);
+        const indent: string = options.insertSpaces ? " ".repeat(options.tabSize) : "\t";
+        pom = { text, eol: document.textDocument.getText().includes("\r\n") ? "\r\n" : "\n", indent, document };
+    } else {
+        const text: string = await fs.promises.readFile(uri.fsPath, "utf8");
+        pom = { text, eol: text.includes("\r\n") ? "\r\n" : "\n", indent: inferIndent(text), document: undefined };
+    }
+    return pom;
+}
+
+/**
+ * The indent unit of a pom that is not loaded: the indentation of the first child line of <project>, else 4 spaces.
+ */
+function inferIndent(text: string): string {
+    const m = RegExp(/<project\b[^>]*>[^\S\n]*\r?\n(?:[^\S\n]*\r?\n)*([ \t]+)</).exec(text);
+    return m ? m[1] : "    ";
+}
+
+function getProjectNode(content: string): Element {
     const projectNodes: Node[] = getNodesByTag(content, XmlTagName.Project);
     if (projectNodes === undefined || projectNodes.length !== 1) {
         throw new UserError("Only support POM file with single <project> node.");
@@ -55,48 +104,25 @@ function constructNodeText(nodeToInsert: PomNode, baseIndent: string, indent: st
     return ["", ...lines].join(`${eol}${baseIndent}${indent}`) + eol;
 }
 
-async function updateWorkspaceEdit(
-    edit: coc.WorkspaceEdit,
-    uri: coc.Uri,
-    parentNode: Element,
-    nodeToInsert: PomNode
-): Promise<coc.WorkspaceEdit> {
-    const baseDocument: coc.Document = await coc.workspace.openTextDocument(uri);
-    const currentDocument: coc.TextDocument = baseDocument.textDocument;
-    const baseIndent: string = getIndentation(currentDocument, parentNode.startIndex);
-
+function insertInto(pom: PomText, parentNode: Element, nodeToInsert: PomNode): PomInsert {
+    const baseIndent: string = getIndentation(pom.text, parentNode.startIndex as number);
     let insertOffset = (parentNode.endIndex as number) - (parentNode.name.length + 3) /* "</parentNode>".length */ + 1;
-    let insertPos: coc.Position = currentDocument.positionAt(insertOffset);
-    // Not to mess up indentation, move cursor to line start:
+    // Not to mess up indentation, move to the line start:
     // <tab><tab>|</dependencies>  =>  |<tab><whitespace></dependencies>
-    const insPosLineStart: coc.Position = coc.Position.create(insertPos.line, 0);
-    const contentBefore: string = currentDocument.getText(coc.Range.create(insPosLineStart, insertPos));
-    if (contentBefore.trim() === "") {
-        insertOffset -= insertPos.character;
-        insertPos = insPosLineStart;
+    const lineStart: number = pom.text.lastIndexOf("\n", insertOffset - 1) + 1;
+    if (pom.text.slice(lineStart, insertOffset).trim() === "") {
+        insertOffset = lineStart;
     }
-
-    await focusCurrentResource(currentDocument.uri);
-    const textEditor: coc.TextEditor = coc.window.activeTextEditor as coc.TextEditor;
-    const options: coc.TextEditorOptions = textEditor.options;
-    const indent: string = options.insertSpaces ? " ".repeat(options.tabSize) : "\t";
-    const eol: string = platform() !== "win32" ? "\n" : "\r\n";
-    const targetText: string = constructNodeText(nodeToInsert, baseIndent, indent, eol);
-    const textEdit: coc.TextEdit = coc.TextEdit.insert(insertPos, targetText);
-
-    edit.changes ??= {};
-    edit.changes[currentDocument.uri] = [textEdit];
-    return edit;
+    return { offset: insertOffset, text: constructNodeText(nodeToInsert, baseIndent, pom.indent, pom.eol) };
 }
 
 /**
  * src: \t\t<position>...
  * returns "\t\t"
  */
-function getIndentation(document: coc.TextDocument, offset: number | null): string {
-    const pos: coc.Position = document.positionAt(offset as number);
-    const lineContentToPos = document.getText(coc.Range.create(coc.Position.create(pos.line, 0), pos));
-    const m = RegExp(/^\s+/).exec(lineContentToPos);
+function getIndentation(text: string, offset: number): string {
+    const lineStart: number = text.lastIndexOf("\n", offset - 1) + 1;
+    const m = RegExp(/^[ \t]+/).exec(text.slice(lineStart, offset));
     return m ? m[0] : "";
 }
 
