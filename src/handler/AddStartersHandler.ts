@@ -100,7 +100,7 @@ export class AddStartersHandler extends BaseHandler {
         const bomIds = toAdd.map((id) => starters.dependencies[id].bom).filter(Boolean);
         const boms = bomIds.filter((id) => id !== undefined).map((id) => starters.boms[id]);
 
-        updatePom(entry, artifacts, boms);
+        await updatePom(entry, artifacts, boms);
         coc.window.showInformationMessage("Pom file successfully updated.");
     }
 }

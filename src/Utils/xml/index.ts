@@ -36,7 +36,7 @@ export async function updatePom(uri: coc.Uri, deps: IArtifact[], boms: IBom[]) {
         }
     }
 
-    coc.workspace.applyEdit(edit);
+    await coc.workspace.applyEdit(edit);
 }
 
 async function getActiveProjectNode(uri: coc.Uri): Promise<Element> {
