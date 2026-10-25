@@ -5,10 +5,12 @@
 import * as coc from "coc.nvim";
 import { AddStartersHandler, GenerateProjectHandler } from "./handler";
 import { BaseHandler } from "./handler/BaseHandler";
+import { registerHelp } from "./help";
 import { ProjectType } from "./model";
 import { getTargetPomXml, loadPackageInfo } from "./Utils";
 
 export async function activate(context: coc.ExtensionContext): Promise<void> {
+    registerHelp(context).catch((error) => coc.window.showErrorMessage(`Unable to register the help page: ${error}`));
     initializeExtension(context);
 }
 

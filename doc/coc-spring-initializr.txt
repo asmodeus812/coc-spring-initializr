@@ -1,0 +1,235 @@
+*coc-spring-initializr.txt*  Spring Initializr support for coc.nvim
+
+
+                   COC-SPRING-INITIALIZR REFERENCE MANUAL
+
+
+Spring Boot projects and starters                      *coc-spring-initializr*
+
+                                      Type |gO| to see the table of contents.
+
+==============================================================================
+INTRODUCTION                                     *coc-spring-initializr-intro*
+
+coc-spring-initializr is a coc.nvim extension that creates Spring Boot
+projects with a Spring Initializr service, https://start.spring.io by default.
+It provides:
+
+- A wizard that generates a Maven, Gradle or Gradle Kotlin DSL project.
+  |coc-spring-initializr-create|
+- A picker that adds Spring Boot starters to the `pom.xml` of an existing
+  Maven Spring Boot project. |coc-spring-initializr-starters|
+
+Installation, setup and settings are in the README of the extension.
+
+coc-spring-initializr defines no key mappings and no |<Plug>| mappings. You
+use it through |:CocCommand|.
+
+==============================================================================
+QUICKSTART                                  *coc-spring-initializr-quickstart*
+
+Create a project in the first workspace folder: >vim
+    :CocCommand spring.initializr.createProject
+<
+Pick "Maven Project", then answer each step. Press `<CR>` to accept the value
+that a text step offers. In the dependency picker select the starters you
+want, then pick "Selected N dependencies" to generate the project.
+
+Add starters to the Spring Boot project you have open: >vim
+    :CocCommand spring.initializr.addStarters
+<
+==============================================================================
+COMMANDS                                      *coc-spring-initializr-commands*
+
+Command                                   What it does ~
+`spring.initializr.createProject`           Asks for the project type, then
+                                          runs one of the three commands
+                                          below.
+`spring.initializr.maven-project`           Generates a Maven project.
+`spring.initializr.gradle-project`          Generates a Gradle project.
+`spring.initializr.gradle-project-kotlin`   Generates a Gradle project with
+                                          the Kotlin DSL.
+`spring.initializr.addStarters`             Adds starters to a `pom.xml`.
+
+The project types of `spring.initializr.createProject` are "Maven Project",
+"Gradle Project" and "Gradle Project - Kotlin DSL".
+
+==============================================================================
+CREATE A PROJECT                                *coc-spring-initializr-create*
+
+The wizard asks these steps in order:
+
+1. Service URL. Only when `spring.initializr.serviceUrl` lists more than one
+   URL: "Select the service URL."
+2. Spring Boot version: "Specify Spring Boot version." The list comes from
+   the service.
+3. Language: "Specify project language." Skipped when
+   `spring.initializr.defaultLanguage` is set.
+4. Group Id: "Input Group Id for your project." The text starts with
+   `spring.initializr.defaultGroupId`, `com.example` by default.
+5. Artifact Id: "Input Artifact Id for your project." The text starts with
+   `spring.initializr.defaultArtifactId`, `demo` by default.
+6. Package name: "Input Package Name for your project." The text starts with
+   the group id and the artifact id joined by a dot, with a dash in them
+   replaced by an underscore.
+7. Packaging: "Specify packaging type." Skipped when
+   `spring.initializr.defaultPackaging` is set.
+8. Java version: "Specify Java version." Skipped when
+   `spring.initializr.defaultJavaVersion` is set.
+9. Dependencies: "Search for dependencies." See below.
+
+While the wizard loads the lists from the service you see "Fetching resources
+from <url>...". The service URL is fetched once per Neovim session.
+
+Dependencies ~
+                                          *coc-spring-initializr-dependencies*
+The picker lists the starters of the chosen Spring Boot version, with their
+group as description. You can search by name and by group.
+
+- Pick a starter to select it. It moves to the "Selected" group as
+  "(selected) <name>". Pick it again to unselect it.
+- "Selected N dependencies" ends the step with the selected starters. With no
+  starter selected it generates a project without dependencies.
+- "Last used" ends the step with the starters of the last project you
+  generated. Its description lists them.
+
+After the last step the project is downloaded and unpacked, with the progress
+"Downloading & unzipping...".
+
+Cancel ~
+                                                *coc-spring-initializr-cancel*
+`<Esc>`, `<C-c>` or an empty answer at any step, in a picker or a text input,
+cancels the whole wizard. No message is shown and nothing is created.
+
+==============================================================================
+PROJECT LOCATION                              *coc-spring-initializr-location*
+
+The project goes into the first workspace folder.
+`spring.initializr.parentFolder` decides where in it:
+
+`artifactId` (default)   A new folder named after the artifact id, for
+                       example `<workspace>/demo`.
+`none`                   The workspace folder itself.
+
+When the target folder already exists (`artifactId`) you get the warning
+"A folder [<folder>] already exists in the selected folder." When it is not
+empty (`none`) you get "The folder [<folder>] is not empty. Existing files
+with same names will be overwritten." Both offer three choices:
+
+"Choose another folder"  Asks for a folder, "Generate into this folder",
+                       starting with the current target. The new folder is
+                       checked the same way.
+"Continue"               Generates into the folder. Files with the same names
+                       are overwritten.
+"Cancel"                 Ends the wizard quietly.
+
+Closing the warning without a choice, for example with `<Esc>`, works like
+"Cancel".
+
+==============================================================================
+OPEN THE PROJECT                                  *coc-spring-initializr-open*
+
+After the project is generated a picker shows "Generated at location:
+<folder>" with two choices:
+
+"Open"     Opens the project folder in the current window.
+"Cancel"   Leaves the project closed. Offered only when Neovim has a
+           workspace folder open.
+
+`<Esc>` leaves the project closed. Set
+`spring.initializr.defaultOpenProjectMethod` to "Open" or "Cancel" to skip
+the picker. When the project is generated into the open workspace folder
+itself there is no picker.
+
+==============================================================================
+ADD STARTERS                                  *coc-spring-initializr-starters*
+
+`spring.initializr.addStarters` edits a `pom.xml`:
+
+1. It uses the `pom.xml` in the current buffer. Otherwise it uses the only
+   `pom.xml` of the workspace, or asks "Select the target project." when
+   there are several.
+2. It reads the Spring Boot version of the project. A project without one
+   gets "Not within a valid Spring Boot project."
+3. When `spring.initializr.serviceUrl` lists more than one URL it asks
+   "Select the service URL."
+4. "Select dependencies to add." lists the starters of that Spring Boot
+   version, after "Fetching new metadata for <version>..." while they load.
+   The starters the pom already has show as "(selected) <name>" and
+   cannot be removed. Pick starters to select or unselect them, then pick
+   "Selected N dependencies".
+5. A picker shows "Adding: [<names>]. Proceed?". "Proceed" writes the
+   starters, and the bills of materials they need, to the pom.
+
+After the edit `spring.initializr.revealAddedStarters` places the cursor on
+the first added `<dependency>`:
+    "always"    (default) shows the pom in the current window, whether it
+                was current, hidden or not open.
+    "current"   moves the cursor only when the pom is the current buffer.
+    "never"     leaves the cursor and the windows alone.
+
+`<Esc>` at any step, or "Cancel", ends the command without a change.
+
+==============================================================================
+MESSAGES                                      *coc-spring-initializr-messages*
+
+"No pom.xml found in the workspace."
+    `spring.initializr.addStarters` found no `pom.xml`. Open a Maven project.
+    Gradle builds are not edited.
+
+"No changes."
+    You selected no new starter. The pom is unchanged.
+
+"Pom file successfully updated."
+    The starters were added.
+
+"Unable to retrieve information of available starters."
+    The service returned no starters for the Spring Boot version of the
+    project. Check the version in the pom or use another service URL.
+
+"Failed to create a project. <reason>"
+    Generating the project failed. The reasons are listed below.
+
+"Fail to edit starters. <reason>"
+    Adding starters failed. The reasons are listed below.
+
+"Unable to register the help page: <reason>"
+    `:help coc-spring-initializr` is not available in this session. The
+    commands still work. Check that the data folder of coc is writable.
+
+Reasons ~
+                                               *coc-spring-initializr-reasons*
+"Not within a valid Spring Boot project."
+    The extension found no Spring Boot version in the pom.
+
+"Failed to fetch metadata."
+    The service could not be reached or returned no project data. A message
+    with the error from the connection or the service comes first. Check the
+    network and `spring.initializr.serviceUrl`.
+
+"Invalid metadata type."
+    The service returned data the extension does not know. Use a Spring
+    Initializr compatible service.
+
+<message of the service>
+    The service rejected the request, for example an unsupported Spring Boot
+    or Java version. The text is the service's own message, or the HTTP
+    status when it sends none.
+
+"Unsupported protocol."
+    The service URL does not start with `http://` or `https://`.
+
+"Too many redirects (5) for <url>"
+    The service redirected more than five times. Use the final URL.
+
+"Timed out while unzipping the generated project."
+    Unpacking took more than two minutes. Try again, or check the disk.
+
+"Zip extraction aborted."
+    Unpacking was stopped by the timeout above.
+
+"Invalid zip entry path: <name>"
+    The archive from the service has a file that would land outside the
+    target folder. Nothing outside it is written. Check the service URL.
+
+ vim:tw=78:ts=8:noet:ft=help:norl:
