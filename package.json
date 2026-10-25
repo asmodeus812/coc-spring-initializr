@@ -1,6 +1,6 @@
 {
     "name": "coc-spring-initializr",
-    "version": "0.0.2",
+    "version": "0.1.0",
     "description": "Coc extension for creating spring & other projects",
     "author": "asmodeus812",
     "license": "MIT",
