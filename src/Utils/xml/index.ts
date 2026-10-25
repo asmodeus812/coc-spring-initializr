@@ -6,6 +6,7 @@ import * as coc from "coc.nvim";
 import { UserError } from "../error";
 import { getNodesByTag, XmlTagName } from "./lexer";
 import * as fs from "fs";
+import * as path from "path";
 
 interface PomText {
     text: string;
@@ -54,17 +55,65 @@ export async function updatePom(uri: coc.Uri, deps: IArtifact[], boms: IBom[]) {
         }
     }
 
+    let text: string = pom.text;
+    for (const ins of [...inserts].sort((x, y) => y.offset - x.offset)) {
+        text = text.slice(0, ins.offset) + ins.text + text.slice(ins.offset);
+    }
     if (pom.document !== undefined) {
         const textDocument: coc.TextDocument = pom.document.textDocument;
         const edits: coc.TextEdit[] = inserts.map((ins) => coc.TextEdit.insert(textDocument.positionAt(ins.offset), ins.text));
         await coc.workspace.applyEdit({ changes: { [textDocument.uri]: edits } });
     } else {
-        let text: string = pom.text;
-        for (const ins of [...inserts].sort((x, y) => y.offset - x.offset)) {
-            text = text.slice(0, ins.offset) + ins.text + text.slice(ins.offset);
-        }
         await fs.promises.writeFile(uri.fsPath, text, "utf8");
     }
+    await revealAddedStarters(uri, text, addedOffset(inserts));
+}
+
+/**
+ * The offset, in the edited pom, of the first added `<dependency>` tag. The dependencies are always the first insert;
+ * a BOM insert before them shifts it, one at the same offset lands after them and does not.
+ */
+function addedOffset(inserts: PomInsert[]): number {
+    const first: PomInsert = inserts[0];
+    const shift: number = inserts
+        .slice(1)
+        .filter((ins) => ins.offset < first.offset)
+        .reduce((sum, ins) => sum + ins.text.length, 0);
+    return first.offset + shift + Math.max(first.text.indexOf("<dependency>"), 0);
+}
+
+/**
+ * Moves the cursor to the first added dependency, by `spring.initializr.revealAddedStarters`: "always" shows the pom in
+ * the current window (loaded, hidden or not open), "current" only moves the cursor when the current buffer is the pom
+ * (asked of Neovim, not of the lagging active editor), "never" leaves the cursor alone.
+ */
+async function revealAddedStarters(uri: coc.Uri, text: string, offset: number): Promise<void> {
+    const mode: string = coc.workspace.getConfiguration("spring.initializr").get<string>("revealAddedStarters", "always");
+    const lineStart: number = text.lastIndexOf("\n", offset - 1) + 1;
+    const line: number = text.slice(0, lineStart).split("\n").length - 1;
+    const nvim = coc.workspace.nvim;
+    if (mode === "always") {
+        await coc.workspace.jumpTo(uri, coc.Position.create(line, offset - lineStart));
+        await nvim.command("normal! zz");
+    } else if (mode === "current" && (await isCurrentBuffer(uri))) {
+        await nvim.call("nvim_win_set_cursor", [0, [line + 1, Buffer.byteLength(text.slice(lineStart, offset))]]);
+        await nvim.command("normal! zz");
+    }
+}
+
+async function isCurrentBuffer(uri: coc.Uri): Promise<boolean> {
+    const current: string = (await coc.workspace.nvim.call("expand", ["%:p"])) as string;
+    return current !== "" && normalisePath(current) === normalisePath(uri.fsPath);
+}
+
+function normalisePath(file: string): string {
+    let resolved: string = path.resolve(file);
+    try {
+        resolved = fs.realpathSync(resolved);
+    } catch {
+        // a path that does not exist stays as resolved
+    }
+    return resolved;
 }
 
 async function readPom(uri: coc.Uri): Promise<PomText> {
