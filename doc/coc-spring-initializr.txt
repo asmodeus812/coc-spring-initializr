@@ -172,9 +172,16 @@ the first added `<dependency>`:
 ==============================================================================
 MESSAGES                                      *coc-spring-initializr-messages*
 
-"No pom.xml found in the workspace."
-    `spring.initializr.addStarters` found no `pom.xml`. Open a Maven project.
-    Gradle builds are not edited.
+"No pom.xml found in the workspace, open a Maven project."
+    `spring.initializr.addStarters` found no `pom.xml`. Gradle builds are not
+    edited. Cancelling the project picker gives no message.
+
+"Generated <artifactId> in <folder>"
+    The project went into the folder that is already open, so no open prompt
+    follows.
+
+"Generated <folder>"
+    `defaultOpenProjectMethod` is "Cancel": the project is written and not opened.
 
 "No changes."
     You selected no new starter. The pom is unchanged.

@@ -73,10 +73,8 @@ export class GenerateProjectHandler extends BaseHandler {
             (coc.workspace.workspaceFolders.some((folder) => folder.uri === this.outputUri?.toString()) ||
                 coc.workspace.root === this.outputUri?.toString())
         ) {
-            return;
-        }
-
-        if ((await specifyOpenMethod(hasOpenFolder, this.outputUri)) === OPEN_IN_NEW_WORKSPACE) {
+            coc.window.showInformationMessage(`Generated ${this.metadata.artifactId} in ${this.outputUri.fsPath}`);
+        } else if ((await specifyOpenMethod(hasOpenFolder, this.outputUri)) === OPEN_IN_NEW_WORKSPACE) {
             await focusCurrentResource(this.outputUri);
         }
     }
@@ -220,7 +218,9 @@ async function extractZip(filepath: string, targetFolder: string, extraction: IE
 
 async function specifyOpenMethod(hasOpenFolder: boolean, projectLocation: coc.Uri): Promise<string> {
     let openMethod = coc.workspace.getConfiguration("spring.initializr").get<string>("defaultOpenProjectMethod", OPEN_IN_NEW_WORKSPACE);
-    if (openMethod !== CANCEL_OPEN_WORKSPACE && openMethod !== OPEN_IN_NEW_WORKSPACE) {
+    if (openMethod === CANCEL_OPEN_WORKSPACE) {
+        coc.window.showInformationMessage(`Generated ${projectLocation.fsPath}`);
+    } else if (openMethod !== OPEN_IN_NEW_WORKSPACE) {
         let candidates: string[] = [OPEN_IN_NEW_WORKSPACE, hasOpenFolder ? CANCEL_OPEN_WORKSPACE : undefined].filter(
             (c) => c !== undefined
         );

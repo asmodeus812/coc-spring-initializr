@@ -65,8 +65,6 @@ export async function initializeExtension(context: coc.ExtensionContext): Promis
                 if (targetFile) {
                     const handler: BaseHandler = new AddStartersHandler();
                     await handler.run("", targetFile);
-                } else {
-                    coc.window.showInformationMessage("No pom.xml found in the workspace.");
                 }
             }
         )

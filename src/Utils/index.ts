@@ -202,6 +202,7 @@ export async function getTargetPomXml(): Promise<coc.Uri | undefined> {
                 .then((res: any) => res?.value);
         }
     }
+    coc.window.showWarningMessage("No pom.xml found in the workspace, open a Maven project.");
     return undefined;
 }
 
