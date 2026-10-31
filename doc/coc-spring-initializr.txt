@@ -42,17 +42,16 @@ Add starters to the Spring Boot project you have open: >vim
 COMMANDS                                      *coc-spring-initializr-commands*
 
 Command                                   What it does ~
-`spring.initializr.createProject`           Asks for the project type, then
-                                          runs one of the three commands
-                                          below.
-`spring.initializr.maven-project`           Generates a Maven project.
-`spring.initializr.gradle-project`          Generates a Gradle project.
-`spring.initializr.gradle-project-kotlin`   Generates a Gradle project with
-                                          the Kotlin DSL.
-`spring.initializr.addStarters`             Adds starters to a `pom.xml`.
+`spring.initializr.createProject`         Asks for the project type, then
+                                          generates the project.
+`spring.initializr.addStarters`           Adds starters to a `pom.xml`.
 
 The project types of `spring.initializr.createProject` are "Maven Project",
-"Gradle Project" and "Gradle Project - Kotlin DSL".
+"Gradle Project" and "Gradle Project - Kotlin DSL". Each type is also a
+command of its own, `spring.initializr.maven-project`,
+`spring.initializr.gradle-project` and
+`spring.initializr.gradle-project-kotlin`. They are not in the command list,
+`:CocCommand` runs them when typed in full.
 
 ==============================================================================
 CREATE A PROJECT                                *coc-spring-initializr-create*

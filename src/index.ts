@@ -21,16 +21,19 @@ export async function initializeExtension(context: coc.ExtensionContext): Promis
         coc.commands.registerCommand(
             "spring.initializr.maven-project",
             async (operationId, defaults) => await new GenerateProjectHandler(ProjectType.MAVEN, defaults).run(operationId),
+            undefined,
             true
         ),
         coc.commands.registerCommand(
             "spring.initializr.gradle-project",
             async (operationId, defaults) => await new GenerateProjectHandler(ProjectType.GRADLE, defaults).run(operationId),
+            undefined,
             true
         ),
         coc.commands.registerCommand(
             "spring.initializr.gradle-project-kotlin",
             async (operationId, defaults) => await new GenerateProjectHandler(ProjectType.GRADLE_KOTLIN, defaults).run(operationId),
+            undefined,
             true
         )
     );
@@ -65,8 +68,7 @@ export async function initializeExtension(context: coc.ExtensionContext): Promis
                 } else {
                     coc.window.showInformationMessage("No pom.xml found in the workspace.");
                 }
-            },
-            true
+            }
         )
     );
 }

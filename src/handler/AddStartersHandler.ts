@@ -29,6 +29,10 @@ export class AddStartersHandler extends BaseHandler {
         // Read pom.xml for $dependencies(gid, aid)
         const content: string = await coc.workspace.readFile(entry.toString());
         const xml: { project: XmlNode } = await readXmlContent(content);
+        if (!xml || !xml.project) {
+            await coc.window.showErrorMessage(`Unable to add starters: ${entry.fsPath} has no <project> element.`);
+            return;
+        }
 
         getDependencyNodes(xml.project).forEach((elem) => {
             deps.push(`${elem.groupId[0]}:${elem.artifactId[0]}`);

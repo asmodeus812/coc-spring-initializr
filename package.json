@@ -1,6 +1,6 @@
 {
     "name": "coc-spring-initializr",
-    "version": "0.1.0",
+    "version": "0.1.1",
     "description": "Coc extension for creating spring & other projects",
     "author": "asmodeus812",
     "license": "MIT",
@@ -114,10 +114,14 @@
                     "description": "Default packaging."
                 },
                 "spring.initializr.revealAddedStarters": {
-                  "type": "string",
-                  "enum": ["always", "current", "never"],
-                  "default": "always",
-                  "description": "Where the cursor goes after addStarters edits the pom: always shows the pom on the first added dependency, current only moves the cursor when the pom is the current buffer, never leaves it alone."
+                    "type": "string",
+                    "enum": [
+                        "always",
+                        "current",
+                        "never"
+                    ],
+                    "default": "always",
+                    "description": "Where the cursor goes after addStarters edits the pom: always shows the pom on the first added dependency, current only moves the cursor when the pom is the current buffer, never leaves it alone."
                 },
                 "spring.initializr.defaultOpenProjectMethod": {
                     "default": "",
