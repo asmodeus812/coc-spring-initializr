@@ -42,17 +42,27 @@ export class AddStartersHandler extends BaseHandler {
         if (this.serviceUrl === undefined) {
             return;
         }
-        const starters: IStarters = await coc.window.withProgress<IStarters>(
+        // coc swallows a failing progress task and yields undefined, so the reason is kept here
+        let fetchError: string | undefined;
+        const starters: IStarters | undefined = await coc.window.withProgress<IStarters | undefined>(
             { title: "Downloading Dependencies list..." },
             async (progress) => {
                 progress.report({ message: `Fetching new metadata for ${bootVersion}...` });
-                return await serviceManager.getStarters(this.serviceUrl as string, bootVersion);
+                let result: IStarters | undefined;
+                try {
+                    result = await serviceManager.getStarters(this.serviceUrl as string, bootVersion);
+                } catch (error: any) {
+                    fetchError = error?.message ?? String(error);
+                }
+                return result;
             }
         );
 
         const oldStarterIds: string[] = [];
-        if (!starters.dependencies) {
-            await coc.window.showErrorMessage("Unable to retrieve information of available starters.");
+        if (!starters || !starters.dependencies) {
+            await coc.window.showErrorMessage(
+                `Unable to retrieve the starters of Spring Boot ${bootVersion} from ${this.serviceUrl}${fetchError ? `: ${fetchError}` : "."}`
+            );
             return;
         }
 

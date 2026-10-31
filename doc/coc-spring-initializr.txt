@@ -189,9 +189,11 @@ MESSAGES                                      *coc-spring-initializr-messages*
 "Pom file successfully updated."
     The starters were added.
 
-"Unable to retrieve information of available starters."
+"Unable to retrieve the starters of Spring Boot <version> from <url>: <reason>"
     The service returned no starters for the Spring Boot version of the
-    project. Check the version in the pom or use another service URL.
+    project, or could not be reached. The reason is the service's own text,
+    for example that it only supports a newer Spring Boot version. Check the
+    version in the pom or use another service URL.
 
 "Failed to create a project. <reason>"
     Generating the project failed. The reasons are listed below.
